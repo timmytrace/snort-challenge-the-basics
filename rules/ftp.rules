@@ -1,0 +1,8 @@
+# FTP IDS rules
+# TryHackMe: Snort Challenge - The Basics
+
+alert tcp any any <> any 21 (msg:"FTP Port 21 Traffic"; sid:1000101; rev:1;)
+alert tcp any any <> any 21 (msg:"Failed FTP Login"; content:"530 User"; sid:1000102; rev:1;)
+alert tcp any any <> any 21 (msg:"Successful FTP Login"; content:"230 User"; sid:1000103; rev:1;)
+alert tcp any any <> any 21 (msg:"FTP Valid Username Password Required"; content:"331 Password"; sid:1000104; rev:1;)
+alert tcp any any <> any 21 (msg:"FTP Administrator Password Required"; content:"331 Password"; content:"Administrator"; sid:1000105; rev:1;)
