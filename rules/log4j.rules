@@ -1,0 +1,5 @@
+# Log4j investigation rule
+# TryHackMe: Snort Challenge - The Basics
+
+# Detect TCP payload sizes between 770 and 855 bytes
+alert tcp any any <> any any (msg:"Payload between 770 and 855 bytes"; dsize:770<>855; sid:1000501; rev:1;)
