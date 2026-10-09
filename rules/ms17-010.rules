@@ -1,0 +1,5 @@
+# MS17-010 / SMB investigation rule
+# TryHackMe: Snort Challenge - The Basics
+
+# Detect the SMB IPC$ share string: \IPC$
+alert tcp any any <> any any (msg:"IPC Share Detected"; content:"|5C 49 50 43 24|"; sid:1000401; rev:1;)
