@@ -1,0 +1,8 @@
+# File signature IDS rules
+# TryHackMe: Snort Challenge - The Basics
+
+# PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+alert tcp any any <> any any (msg:"PNG File Detected"; content:"|89 50 4E 47 0D 0A 1A 0A|"; sid:1000201; rev:1;)
+
+# GIF files begin with ASCII GIF8 (covers GIF87a and GIF89a)
+alert tcp any any <> any any (msg:"GIF File Detected"; content:"|47 49 46 38|"; sid:1000202; rev:1;)
