@@ -1,0 +1,4 @@
+# Torrent metafile IDS rule
+# TryHackMe: Snort Challenge - The Basics
+
+alert tcp any any <> any any (msg:"Torrent Metafile Detected"; content:".torrent"; nocase; sid:1000301; rev:1;)
